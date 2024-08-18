@@ -1,54 +1,39 @@
-import { handleEnrollment } from "./application/handleEnrollment";
 import { InMemoryCourseRepository } from "./infrastructure/inMemoryCourseRepository";
+import { CourseProposal } from "./interfaces/courseRepository";
 
-// Create an instance of the in-memory course repository
-const courseRepo = new InMemoryCourseRepository();
+const repo = new InMemoryCourseRepository();
+
+// Proposing a new course
+const courseProposal: CourseProposal = {
+    courseName: "Introduction to TypeScript",
+    classSize: {
+        max: 3,
+        min: 2
+    },
+    description: 'Learn the basics of TypeScript',
+    instructor: 'John Smith'
+};
+
 
 // Function to run the enrollment example
 async function runEnrollmentInMemoryCourseRepository() {
     // Add a course to the repository
-    const course = await courseRepo.addCourse('BDD for Beginners', 2, 3);
-    console.log('Added course:', course);
+    const newCourse = await repo.propose(courseProposal);
+    console.log('New Course:', newCourse);
 
     // Enroll a participant
-    const result = await handleEnrollment(
-        course.courseId,
-        'inmemorycourserepository@example.com',
-        courseRepo
-    );
+    newCourse.enrollmentList.push("New Student");
+    const updatedCourse = await repo.save(newCourse);
+    console.log('Updated Course:', updatedCourse);
 
-    // Log the result
-    console.log('Enrollment result:', result);
+
+    // Finding a course
+    const foundCourse = await repo.findById(newCourse.courseId);
+    console.log('Found Course:', foundCourse);
 }
 
-// Execute the example InMemoryCourseRepository
+
 runEnrollmentInMemoryCourseRepository().then(() => {
-
-    console.log('Enrollment process completed.');
-}).catch(error => {
-    console.error('Error during enrollment process:', error);
-});
-
-// Function to run the enrollment example
-async function runEnrollmentFakeCourseRepository() {
-    // Add a course to the repository
-    const course = await courseRepo.addCourse('BDD for Beginners', 2, 3);
-    console.log('Added course:', course);
-
-    // Enroll a participant
-    const result = await handleEnrollment(
-        course.courseId,
-        'fakecourserepository@example.com',
-        courseRepo
-    );
-
-    // Log the result
-    console.log('Enrollment result:', result);
-}
-
-// Execute the example with FakeCourseRepository
-runEnrollmentFakeCourseRepository().then(() => {
-
     console.log('Enrollment process completed.');
 }).catch(error => {
     console.error('Error during enrollment process:', error);
