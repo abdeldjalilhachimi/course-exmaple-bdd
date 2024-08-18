@@ -1,29 +1,66 @@
 import { InMemoryCourseRepository } from '../src/infrastructure/inMemoryCourseRepository';
-import { handleEnrollment } from '../src/application/handleEnrollment';
+import { proposeCourse } from '../src/application/proposeCourse';
 
 const courseRepo = new InMemoryCourseRepository();
 
-test('should enroll participant successfully', async () => {
-    // Setup initial course
-    const course = await courseRepo.addCourse('BDD for Beginners', 2, 3);
+describe('Course Management', () => {
+    test('should propose a course successfully', async () => {
+        const courseProposal = {
+            courseName: 'BDD for beginners',
+            classSize: {
+                min: 3,
+                max: 10,
+            },
+            description: 'a course for beginners',
+            instructor: 'Abdeldjalil',
+        };
 
-    // Handle enrollment
-    await handleEnrollment(course.courseId, 'Alice', courseRepo);
+        const result = await proposeCourse(courseProposal, courseRepo);
 
-    // Verify the enrollment
-    const updatedCourse = await courseRepo.getCourse(course.courseId);
-    expect(updatedCourse?.enrollmentList).toContain('Alice');
-});
+        expect(result.success).toBe(true);
+        expect(result.courseId).toBeDefined();
+        expect(result.message).toContain('has been proposed successfully');
 
-test('should not enroll participant when course is full', async () => {
-    // Setup initial course
-    const course = await courseRepo.addCourse('BDD for Beginners', 2, 3);
+        const savedCourse = await courseRepo.findById(result.courseId!);
+        expect(savedCourse).toBeDefined();
+        expect(savedCourse?.courseName).toBe('BDD for beginners');
+        expect(savedCourse?.classSize.min).toBe(3);
+        expect(savedCourse?.classSize.max).toBe(10);
+        expect(savedCourse?.description).toBe('a course for beginners');
+        expect(savedCourse?.instructor).toBe('Abdeldjalil');
+    });
 
-    // Enroll participants
-    await handleEnrollment(course.courseId, 'Alice', courseRepo);
-    await handleEnrollment(course.courseId, 'Bob', courseRepo);
-    await handleEnrollment(course.courseId, 'Cherif', courseRepo);
-    const result = await handleEnrollment(course.courseId, 'Charlie', courseRepo);
+    test('should not propose a course with invalid class size', async () => {
+        const invalidCourseProposal = {
+            courseName: 'Invalid Course',
+            classSize: {
+                min: 10,
+                max: 5,
+            },
+            description: 'This should fail',
+            instructor: 'Test Instructor',
+        };
 
-    expect(result?.enrollmentSuccess).toBe(false);
+        const result = await proposeCourse(invalidCourseProposal, courseRepo);
+
+        expect(result.success).toBe(false);
+        expect(result.message).toBe('Maximum class size must be greater than minimum class size');
+    });
+
+    test('should not propose a course without required fields', async () => {
+        const incompleteCourseProposal = {
+            courseName: '',  // Empty name
+            classSize: {
+                min: 1,
+                max: 10,
+            },
+            description: 'This should fail',
+            instructor: '',  // Empty instructor
+        };
+
+        const result = await proposeCourse(incompleteCourseProposal, courseRepo);
+
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Course name and instructor are required');
+    });
 });
